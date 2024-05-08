@@ -1,11 +1,20 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import {
+    signInStart,
+    signInSuccess,
+    signInFailure,
+} from "../redux/user/userSlice";
+import { useDispatch, useSelector } from "react-redux";
 
 export default function SignIn() {
     const [formData, setFormData] = useState({});
-    const [error, setError] = useState(false);
-    const [loading, setLoading] = useState(false);
+    // const [error, setError] = useState(false);
+    // const [loading, setLoading] = useState(false);
+    const { loading, error } = useSelector((state) => state.user);
+    console.log(loading, error);
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.id]: e.target.value });
     };
@@ -14,8 +23,9 @@ export default function SignIn() {
         e.preventDefault();
         console.log("FORM DATA:", formData);
         try {
-            setLoading(true);
-            setError(false);
+            // setLoading(true);
+            // setError(false);
+            dispatch(signInStart());
             const res = await fetch(
                 "/api/auth/signin",
                 {
@@ -29,15 +39,20 @@ export default function SignIn() {
             );
             const data = await res.json();
             console.log("FORM DATA AFTER BACKEND:", data);
-            setLoading(false);
+            // setLoading(false);
+
             if (data.success == false) {
-                setError(true);
+                // setError(true);
+                dispatch(signInFailure(data.message));
                 return;
             }
-            navigate('/')
+            dispatch(signInSuccess(data));
+            navigate("/");
         } catch (error) {
-            setLoading(false);
-            setError(true);
+            // setLoading(false);
+            // setError(true);
+            dispatch(signInFailure(error));
+            console.log(error.message);
         }
     };
     return (
@@ -72,7 +87,7 @@ export default function SignIn() {
                 </Link>
             </div>
             <p className="text-red-700 mt-5">
-                {error && "Something went wrong"}
+                {error ? error.message || "Something went wrong" : ""}
             </p>
         </div>
     );
