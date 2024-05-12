@@ -8,8 +8,15 @@ import {
     uploadBytesResumable,
 } from "firebase/storage";
 import { app } from "../firebase";
+import { useDispatch } from "react-redux";
+import {
+    updateUserStart,
+    updateUserSuccess,
+    updateUserFailure,
+} from "../redux/user/userSlice";
 
 export default function Profile() {
+    const dispatch = useDispatch();
     const fileRef = useRef(null);
     const [image, setImage] = useState(undefined);
     const [imagePercent, setImagePercent] = useState(0);
@@ -17,8 +24,9 @@ export default function Profile() {
     const [imageError, setImageError] = useState(false);
     const [formData, setFormData] = useState({});
     // console.log("form data ", formData);
+    const [updateSuccess, setUpdateSucces] = useState(false);
 
-    const { currentUser } = useSelector((state) => state.user);
+    const { currentUser, loading, error } = useSelector((state) => state.user);
     // console.log("Cur", currentUser);
     if (!currentUser) {
         return <div>Loading...</div>;
@@ -58,11 +66,40 @@ export default function Profile() {
             }
         );
     };
+
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.id]: e.target.value });
+    };
+    // console.log('formData: ', formData);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            dispatch(updateUserStart());
+            const res = await fetch(`/api/user/update/${currentUser._id}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(formData),
+            });
+            const data = await res.json();
+            console.log("data", data);
+            if (data.success === false) {
+                dispatch(updateUserFailure(data));
+                return;
+            }
+            dispatch(updateUserSuccess(data));
+            setUpdateSucces(true);
+        } catch (error) {
+            dispatch(updateUserFailure(error));
+        }
+    };
     return (
         <div className="p-3 max-w-lg mx-auto">
             <h1 className="text-3xl font-semibold text-center my-7">Profile</h1>
             <h1></h1>
-            <form className="flex flex-col gap-4">
+            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
                 <input
                     type="file"
                     ref={fileRef}
@@ -79,7 +116,8 @@ export default function Profile() {
                 <p className="text-sm self-center">
                     {imageError ? (
                         <span className="text-red-700">
-                            Error uploading image (file size must be less than 2MB)
+                            Error uploading image (file size must be less than
+                            2MB)
                         </span>
                     ) : imagePercent > 0 && imagePercent < 100 ? (
                         <span className="text-slate-700">
@@ -99,6 +137,7 @@ export default function Profile() {
                     id="username"
                     placeholder="Username"
                     className="bg-slate-100 rounded-lg p-3"
+                    onChange={handleChange}
                     defaultValue={currentUser.username}
                 />
                 <input
@@ -106,6 +145,7 @@ export default function Profile() {
                     id="email"
                     placeholder="Email"
                     className="bg-slate-100 rounded-lg p-3"
+                    onChange={handleChange}
                     defaultValue={currentUser.email}
                 />
                 <input
@@ -113,9 +153,10 @@ export default function Profile() {
                     id="password"
                     placeholder="Password"
                     className="bg-slate-100 rounded-lg p-3"
+                    onChange={handleChange}
                 />
                 <button className="bg-slate-700 text-white p-3 rounded-lg uppercase hover:opacity-95 disabled:opacity-80">
-                    Update
+                   {loading ? 'Loading...' : 'Update'}
                 </button>
             </form>
             <div className="flex justify-between mt-5">
@@ -124,6 +165,12 @@ export default function Profile() {
                 </span>
                 <span className="text-red-700 cursor-pointer">Sign out</span>
             </div>
+            <p className="text-red-700 mt-5">
+                {error && "Something went wrong"}
+            </p>
+            <p className="text-green-700 mt-5">
+                {updateSuccess && "User is updated successfully"}
+            </p>
         </div>
     );
 }
