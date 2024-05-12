@@ -100,3 +100,9 @@ export const google = async (req, res, next) => {
         console.log("Console ERROR GOOGLE ", error);
     }
 };
+
+export const signout = (req, res) => {
+    res.clearCookie("access_token")
+        .status(200)
+        .json({ message: "Sigonut success" });
+};
